@@ -1,0 +1,18 @@
+{
+  "name": "student-matching",
+  "version": "1.0.0",
+  "description": "Student identity matching for photographed exam papers (code / name / phone) — algorithm, API contract and reference server",
+  "main": "src/api.js",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "start": "node examples/server.js"
+  },
+  "dependencies": {
+    "fuse.js": "7.5.0"
+  }
+}
