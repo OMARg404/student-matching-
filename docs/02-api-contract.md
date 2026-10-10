@@ -27,8 +27,8 @@ endpoint‏ين. التطبيق الشغال في [`examples/server.js`](../exam
 
 | الحقل | إلزامي | |
 |---|---|---|
-| `request_id` | ✔️ | معرّف الورقة. **ثابت للورقة** — لو اتبعت تاني (إعادة محاولة) اعتبروه نفس الورقة، مش ورقة جديدة ومش تكرار |
-| `exam.id` | ✔️ | معرّف الامتحان — لاكتشاف التكرار جوه نفس الامتحان |
+| `request_id` | ✔️ | معرّف الورقة عندنا — بيرجع زي ما هو في الرد عشان نربط الرد بالورقة |
+| `exam.id` | ✔️ | معرّف الامتحان عندنا |
 | `exam.name`, `exam.form` | | للعرض/السجل |
 | `extracted.*` | واحد على الأقل | أي حقل ممكن يكون `null` |
 
@@ -45,7 +45,6 @@ endpoint‏ين. التطبيق الشغال في [`examples/server.js`](../exam
   "student": { "student_code": "1001", "name": "أحمد محمد علي", "group": "مجموعة السبت 4م", "year": "تالتة ثانوي" },
   "suggested_student": null,
   "candidates": [],
-  "duplicate_of": null,
   "note_ar": null
 }
 ```
@@ -58,7 +57,6 @@ endpoint‏ين. التطبيق الشغال في [`examples/server.js`](../exam
 | `student` | الطالب — في `matched` بس |
 | `suggested_student` | اقتراح واحد محتاج تأكيد — في `name_only` |
 | `candidates` | لحد 5 مرشحين. في `conflict` بالظبط 2 ومعاهم `reason: "code" \| "name"` |
-| `duplicate_of` | `request_id` ورقة سابقة متكررة معاها في نفس الامتحان (تحت)، أو `null` |
 | `note_ar` | شرح عربي جاهز للعرض |
 
 `student_code` اللي بترجّعوه هو اللي الدرجة هتتبعتلكم بيه بعدين، فلازم يكون **ثابت** للطالب.
@@ -69,7 +67,7 @@ endpoint‏ين. التطبيق الشغال في [`examples/server.js`](../exam
 ```json
 { "status": "matched", "method": "phone_unique", "review_recommended": true,
   "student": { "student_code": "2052", "name": "مي عادل إبراهيم", "group": "...", "year": "..." },
-  "candidates": [], "duplicate_of": null,
+  "candidates": [],
   "note_ar": "مطابقة تلقائية برقم الهاتف: الكود المستخرج لم يتطابق مع أي طالب، لكن رقم الهاتف (01100000005) يطابق \"مي عادل إبراهيم\" حصريًا. اتأكدت تلقائيًا - يُفضّل مراجعة سريعة." }
 ```
 
@@ -96,17 +94,8 @@ endpoint‏ين. التطبيق الشغال في [`examples/server.js`](../exam
 **not_found**
 ```json
 { "status": "not_found", "method": "none", "review_recommended": true,
-  "student": null, "suggested_student": null, "candidates": [], "duplicate_of": null, "note_ar": null }
+  "student": null, "suggested_student": null, "candidates": [], "note_ar": null }
 ```
-
-### التكرار — [`src/duplicates.js`](../src/duplicates.js)
-
-ورقة **متكررة** مع ورقة سابقة لو **نفس `exam.id`** و واحدة من دول:
-1. الاتنين اتطابقوا على **نفس الطالب**، أو
-2. **الاسم المقروء** هو هو حرفيًا، أو
-3. **الكود المقروء** هو هو حرفيًا.
-
-(2) و(3) بيمسكوا نفس الورقة لو اتصوّرت مرتين حتى لو ماتطابقتش. نفس `request_id` المتبعت تاني **مش** تكرار.
 
 ---
 
@@ -149,7 +138,7 @@ GET /v1/students/search?q=مى%20عادل&limit=10
 | 429 | `RATE_LIMITED` | لو عندكم حد للطلبات (مع `Retry-After`) |
 | 5xx | `INTERNAL_ERROR` | أي خطأ عندكم |
 
-لأي 429 / 5xx / timeout بنعيد **بنفس `request_id`** — عشان كده لازم الطلب المتكرر يتعامل كنفس الورقة.
+لأي 429 / 5xx / timeout بنعيد الطلب. المطابقة مفيهاش أي حالة بتتخزن عندكم، فإعادة نفس الطلب بترجع نفس الرد.
 
 ---
 

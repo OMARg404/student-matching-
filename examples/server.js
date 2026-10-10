@@ -5,9 +5,8 @@
  *   API_TOKEN=change-me node examples/server.js
  *   PORT=8080 ROSTER_FILE=./my-roster.json API_TOKEN=... node examples/server.js
  *
- * The roster here is a JSON file loaded into memory and duplicates are kept in memory too.
- * In your platform, replace `loadRoster()` with your real students table and `matchLog` with
- * a real table (one row per request_id). Everything else can stay as is.
+ * The roster here is a JSON file loaded into memory. In your platform, replace `loadRoster()`
+ * with your real students table. Everything else can stay as is.
  */
 const http = require('http');
 const fs = require('fs');
@@ -31,8 +30,6 @@ function loadRoster() {
 }
 let students = loadRoster();
 
-// request_id -> {id, exam_id, student_id, extracted_name, extracted_code}
-const matchLog = new Map();
 
 function send(res, status, body) {
     const json = JSON.stringify(body);
@@ -83,18 +80,7 @@ const server = http.createServer(async (req, res) => {
             const v = validateMatchRequest(body);
             if (!v.ok) return sendError(res, 400, v.error);
 
-            const response = buildMatchResponse(students, v.value, [...matchLog.values()]);
-
-            // Idempotent: the same request_id re-sent (network retry) overwrites its own log row
-            // and is never reported as a duplicate of itself.
-            const matched = response.status === 'matched' ? students.find((s) => s.student_code === response.student.student_code) : null;
-            matchLog.set(v.value.request_id, {
-                id: v.value.request_id,
-                exam_id: v.value.exam.id,
-                student_id: matched ? matched.id : null,
-                extracted_name: v.value.extracted.student_name,
-                extracted_code: v.value.extracted.student_code
-            });
+            const response = buildMatchResponse(students, v.value);
             return send(res, 200, response);
         }
 
@@ -115,4 +101,4 @@ if (require.main === module) {
     server.listen(PORT, () => console.log(`student-matching reference API on :${PORT} (${students.length} students)`));
 }
 
-module.exports = { server, _reloadRoster: () => { students = loadRoster(); matchLog.clear(); } };
+module.exports = { server, _reloadRoster: () => { students = loadRoster(); } };

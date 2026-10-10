@@ -22,18 +22,18 @@ describe('reference server', () => {
         assert.equal((await call('/v1/students/search?q=1', { token: 'nope' })).status, 401);
     });
 
-    it('POST /v1/papers/match -> matched, then duplicate on a second paper of the same student', async () => {
-        const first = await call('/v1/papers/match', { method: 'POST', body: { request_id: 'p1', exam: { id: 'ex1' }, extracted: { student_code: '1001', student_name: 'أحمد محمد' } } });
-        assert.equal(first.status, 200);
-        assert.equal(first.body.status, 'matched');
-        assert.equal(first.body.duplicate_of, null);
+    it('POST /v1/papers/match -> matched', async () => {
+        const r = await call('/v1/papers/match', { method: 'POST', body: { request_id: 'p1', exam: { id: 'ex1' }, extracted: { student_code: '1001', student_name: 'أحمد محمد' } } });
+        assert.equal(r.status, 200);
+        assert.equal(r.body.request_id, 'p1');
+        assert.equal(r.body.status, 'matched');
+        assert.equal(r.body.student.student_code, '1001');
+    });
 
-        const retry = await call('/v1/papers/match', { method: 'POST', body: { request_id: 'p1', exam: { id: 'ex1' }, extracted: { student_code: '1001', student_name: 'أحمد محمد' } } });
-        assert.equal(retry.body.duplicate_of, null, 'same request_id retried is not a duplicate');
-
-        const second = await call('/v1/papers/match', { method: 'POST', body: { request_id: 'p2', exam: { id: 'ex1' }, extracted: { student_phone: '01000000001' } } });
-        assert.equal(second.body.status, 'matched');
-        assert.equal(second.body.duplicate_of, 'p1');
+    it('matches by phone when the code is unreadable', async () => {
+        const r = await call('/v1/papers/match', { method: 'POST', body: { request_id: 'p2', exam: { id: 'ex1' }, extracted: { student_phone: '01000000001' } } });
+        assert.equal(r.body.status, 'matched');
+        assert.equal(r.body.method, 'phone_unique');
     });
 
     it('400 with a machine-readable error code on bad input', async () => {

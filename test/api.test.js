@@ -65,16 +65,6 @@ describe('buildMatchResponse', () => {
         assert.equal(r.status, 'not_found');
         assert.deepEqual(r.candidates, []);
     });
-    it('flags a duplicate for the same exam, and only the same exam', () => {
-        const prev = [{ id: 'old1', exam_id: 'e1', student_id: 's1', extracted_name: null, extracted_code: '1001' }];
-        assert.equal(buildMatchResponse(roster, req({ student_code: '1001' }), prev).duplicate_of, 'old1');
-        const other = [{ ...prev[0], exam_id: 'e2' }];
-        assert.equal(buildMatchResponse(roster, req({ student_code: '1001' }), other).duplicate_of, null);
-    });
-    it('a retried request_id is never a duplicate of itself', () => {
-        const prev = [{ id: 'r1', exam_id: 'e1', student_id: 's1', extracted_name: null, extracted_code: '1001' }];
-        assert.equal(buildMatchResponse(roster, req({ student_code: '1001' }), prev).duplicate_of, null);
-    });
 });
 
 describe('search', () => {

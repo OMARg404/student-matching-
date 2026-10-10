@@ -5,7 +5,6 @@
  */
 const { matchStudent, suggestPossibleMatches } = require('./matching');
 const { searchStudents } = require('./search');
-const { findDuplicate } = require('./duplicates');
 const { normalizeIdentifier } = require('./normalize');
 
 /** Which algorithm method maps to which public status. */
@@ -75,10 +74,8 @@ function validateMatchRequest(body) {
  * Run the full match for one paper and build the response body.
  * @param {Array} students - the roster
  * @param {object} req - a validated request (validateMatchRequest(...).value)
- * @param {Array} [previousResults] - earlier match results for duplicate detection
- *        shape: {id, exam_id, student_id, extracted_name, extracted_code}
  */
-function buildMatchResponse(students, req, previousResults = []) {
+function buildMatchResponse(students, req) {
     const { student_code, student_name, student_phone } = req.extracted;
     const result = matchStudent(students, student_code, student_name, student_phone);
     const status = STATUS_BY_METHOD[result.method];
@@ -90,13 +87,6 @@ function buildMatchResponse(students, req, previousResults = []) {
             students
         ).map((s) => publicStudent(s, { reason: s.reason || null }));
 
-    const duplicate = findDuplicate(previousResults.filter((r) => r.id !== req.request_id), {
-        exam_id: req.exam.id,
-        student_id: result.matchedStudent && status === 'matched' ? result.matchedStudent.id : null,
-        extracted_name: student_name,
-        extracted_code: student_code
-    });
-
     return {
         request_id: req.request_id,
         status,
@@ -105,7 +95,6 @@ function buildMatchResponse(students, req, previousResults = []) {
         student: status === 'matched' ? publicStudent(result.matchedStudent) : null,
         suggested_student: status === 'needs_review' && result.matchedStudent ? publicStudent(result.matchedStudent) : null,
         candidates,
-        duplicate_of: duplicate ? duplicate.id : null,
         note_ar: result.matchNote
     };
 }
