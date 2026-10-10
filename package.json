@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Student identity matching for photographed exam papers (code / name / phone) — algorithm, API contract and reference server",
   "main": "src/api.js",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "engines": {
     "node": ">=18"
