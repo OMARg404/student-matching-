@@ -28,7 +28,7 @@ function normalizeDigits(s) {
  *  - lower-case, Arabic digits -> Latin
  *  - removes tashkeel (diacritics) and tatweel (ـ)
  *  - أ إ آ ٱ -> ا ,  ى -> ي ,  ة -> ه ,  ؤ -> و ,  ئ -> ي
- *  - ذ -> ز ,  ث -> س ,  ظ -> ض   (very common handwriting / colloquial swaps in Egypt)
+ *  - ذ -> ز ,  ث -> س ,  ظ -> ض   (common spelling swaps in Egyptian Arabic)
  *  - punctuation -> space
  *  - repeated LETTERS collapse to one ("عاادل" -> "عادل"); digits are NOT collapsed ("1001" stays)
  *  - "عبد ال..." / "ابو ..." / "بو ..." are glued to the next word ("عبد الله" -> "عبدالله")

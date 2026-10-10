@@ -1,22 +1,22 @@
-# 02 — عقد الـAPI (المطلوب منكم)
+# 02 — API contract (what you need to provide)
 
-endpoint‏ين. التطبيق الشغال في [`examples/server.js`](../examples/server.js). أي تعديل في أسماء الحقول أو المسارات يناسبكم، قولوا.
+Two endpoints. A working implementation is in [`examples/server.js`](../examples/server.js). If different field names or paths suit you better, tell us.
 
-- **Base URL**: بتاعكم.
-- **Auth**: `Authorization: Bearer <token>` على كل الطلبات — إنتو اللي بتولّدوا التوكن.
+- **Base URL**: yours.
+- **Auth**: `Authorization: Bearer <token>` on every request — you generate the token.
 - **Content-Type**: `application/json; charset=utf-8`.
-- **مهلة الرد**: لحد **10 ثواني**.
+- **Timeout**: we wait up to **10 seconds** for a response.
 
 ---
 
-## 1) `POST /v1/papers/match` — طابق ورقة
+## 1) `POST /v1/papers/match` — match one paper
 
-### الطلب
+### Request
 
 ```json
 {
   "request_id": "res_8f2a91c0",
-  "exam": { "id": "exam_51b0e7aa", "name": "امتحان الباب الأول", "form": "A" },
+  "exam": { "id": "exam_51b0e7aa", "name": "Chapter 1 exam", "form": "A" },
   "extracted": {
     "student_code": "1001",
     "student_name": "احمد محمد",
@@ -25,16 +25,16 @@ endpoint‏ين. التطبيق الشغال في [`examples/server.js`](../exam
 }
 ```
 
-| الحقل | إلزامي | |
+| Field | Required | |
 |---|---|---|
-| `request_id` | ✔️ | معرّف الورقة عندنا — بيرجع زي ما هو في الرد عشان نربط الرد بالورقة |
-| `exam.id` | ✔️ | معرّف الامتحان عندنا |
-| `exam.name`, `exam.form` | | للعرض/السجل |
-| `extracted.*` | واحد على الأقل | أي حقل ممكن يكون `null` |
+| `request_id` | ✔️ | Our ID for the paper — returned unchanged in the response so we can link the response to the paper |
+| `exam.id` | ✔️ | Our ID for the exam |
+| `exam.name`, `exam.form` | | For display / logging |
+| `extracted.*` | at least one | Any field may be `null` |
 
-`validateMatchRequest` في [`src/api.js`](../src/api.js) بتنضّف القيم: أرقام عربي ← إنجليزي (`١٠٠١` ← `1001`)، المسافات والشرَط جوه الكود بتتشال، التليفون بيتوحّد لـ `01XXXXXXXXX`، والنص الفاضي = `null`. (نفس التوحيد لازم يتعمل على بياناتكم بـ `prepareRoster` — [01](01-matching-algorithm.md#البيانات-اللي-بتدخل-الخوارزم).)
+`validateMatchRequest` in [`src/api.js`](../src/api.js) cleans the values: Arabic digits → Latin (`١٠٠١` → `1001`), spaces and dashes inside the code are removed, the phone is normalized to `01XXXXXXXXX`, and an empty string becomes `null`. (The same normalization must be applied to your data with `prepareRoster` — see [01](01-matching-algorithm.md#input-data).)
 
-### الرد — `200 OK` (لأي ورقة اتعالجت، حتى لو الطالب مش موجود)
+### Response — `200 OK` (for every processed paper, even when the student is not found)
 
 ```json
 {
@@ -49,21 +49,23 @@ endpoint‏ين. التطبيق الشغال في [`examples/server.js`](../exam
 }
 ```
 
-| الحقل | |
+| Field | |
 |---|---|
 | `status` | `matched` \| `needs_review` \| `conflict` \| `not_found` |
-| `method` | القاعدة اللي طلّعت القرار — [01](01-matching-algorithm.md) |
-| `review_recommended` | `true` لأي حاجة مش `matched`، وكمان لـ`matched` اللي اتصحح تلقائي (`code_one_digit_off`، `phone_unique`) |
-| `student` | الطالب — في `matched` بس |
-| `suggested_student` | اقتراح واحد محتاج تأكيد — في `name_only` |
-| `candidates` | لحد 5 مرشحين. في `conflict` بالظبط 2 ومعاهم `reason: "code" \| "name"` |
-| `note_ar` | شرح عربي جاهز للعرض |
+| `method` | The rule that produced the decision — see [01](01-matching-algorithm.md) |
+| `review_recommended` | `true` for anything that is not `matched`, and also for a `matched` that was auto-corrected (`code_one_digit_off`, `phone_unique`) |
+| `student` | The student — only when `matched` |
+| `suggested_student` | A single suggestion that must be confirmed — only for `name_only` |
+| `candidates` | Up to 5 candidates. For `conflict`, exactly 2, each with `reason: "code" \| "name"` |
+| `note_ar` | Arabic explanation, ready to show to the reviewer |
 
-`student_code` اللي بترجّعوه هو اللي الدرجة هتتبعتلكم بيه بعدين، فلازم يكون **ثابت** للطالب.
+The `student_code` you return is the one the mark will be sent back with later, so it must be **stable** for that student.
 
-### الحالات بأمثلة
+### Examples of each status
 
-**matched (بالتليفون)**
+Abbreviated — `request_id` and any field not shown are present as in the full response above.
+
+**matched (by phone)**
 ```json
 { "status": "matched", "method": "phone_unique", "review_recommended": true,
   "student": { "student_code": "2052", "name": "مي عادل إبراهيم", "group": "...", "year": "..." },
@@ -71,7 +73,7 @@ endpoint‏ين. التطبيق الشغال في [`examples/server.js`](../exam
   "note_ar": "مطابقة تلقائية برقم الهاتف: الكود المستخرج لم يتطابق مع أي طالب، لكن رقم الهاتف (01100000005) يطابق \"مي عادل إبراهيم\" حصريًا. اتأكدت تلقائيًا - يُفضّل مراجعة سريعة." }
 ```
 
-**needs_review (الاسم بس)**
+**needs_review (name only)**
 ```json
 { "status": "needs_review", "method": "name_only", "review_recommended": true,
   "student": null,
@@ -80,7 +82,7 @@ endpoint‏ين. التطبيق الشغال في [`examples/server.js`](../exam
   "note_ar": "اتطابق بالاسم بس. الكود المسجّل في قاعدة البيانات هو 3107. من فضلك أكّد!" }
 ```
 
-**conflict (اشتباه بين طالبين)**
+**conflict (two possible students)**
 ```json
 { "status": "conflict", "method": "code_name_conflict", "review_recommended": true,
   "student": null,
@@ -99,9 +101,9 @@ endpoint‏ين. التطبيق الشغال في [`examples/server.js`](../exam
 
 ---
 
-## 2) `GET /v1/students/search?q=...&limit=10` — بحث يدوي
+## 2) `GET /v1/students/search?q=...&limit=10` — manual search
 
-خانة واحدة: **اسم أو جزء من اسم، أو كود أو جزء من كود**.
+One search box: **a name or part of a name, or a code or part of a code**.
 
 ```
 GET /v1/students/search?q=مى%20عادل&limit=10
@@ -115,33 +117,33 @@ GET /v1/students/search?q=مى%20عادل&limit=10
 }
 ```
 
-- `limit`: من 1 لـ50، الافتراضي 10. `total` = كل النتايج قبل القص.
-- الترتيب: كود مطابق بالظبط ← أكواد فيها الجزء ده ← أسماء (بحث متسامح مع الأخطاء بعد التوحيد العربي) — [`src/search.js`](../src/search.js).
-- أرقام عربي شغالة (`٢٠٥٢`).
+- `limit`: 1 to 50, default 10. `total` = number of results before the limit is applied.
+- Order: exact code match → codes containing the query → names (typo-tolerant search after Arabic normalization) — see [`src/search.js`](../src/search.js).
+- Arabic digits work (`٢٠٥٢`).
 
 ---
 
-## الأخطاء
+## Errors
 
 ```json
 { "error": { "code": "MISSING_FIELD", "field": "exam.id", "message": "exam.id is required" } }
 ```
 
-| HTTP | `error.code` | السبب |
+| HTTP | `error.code` | Cause |
 |---|---|---|
-| 400 | `INVALID_JSON` | الجسم مش JSON |
-| 400 | `MISSING_FIELD` | `request_id` / `exam.id` / `q` ناقص |
-| 400 | `NOTHING_EXTRACTED` | الكود والاسم والتليفون كلهم فاضيين |
-| 401 | `UNAUTHORIZED` | التوكن ناقص أو غلط |
-| 404 | `NOT_FOUND` | endpoint غلط |
-| 413 | `PAYLOAD_TOO_LARGE` | الطلب أكبر من 64KB |
-| 429 | `RATE_LIMITED` | لو عندكم حد للطلبات (مع `Retry-After`) |
-| 5xx | `INTERNAL_ERROR` | أي خطأ عندكم |
+| 400 | `INVALID_JSON` | The body is not valid JSON |
+| 400 | `MISSING_FIELD` | `request_id` / `exam.id` / `q` is missing |
+| 400 | `NOTHING_EXTRACTED` | Code, name and phone are all empty |
+| 401 | `UNAUTHORIZED` | Missing or wrong token |
+| 404 | `NOT_FOUND` | Unknown endpoint |
+| 413 | `PAYLOAD_TOO_LARGE` | Request larger than 64 KB |
+| 429 | `RATE_LIMITED` | If you rate-limit requests (send `Retry-After`) |
+| 5xx | `INTERNAL_ERROR` | Any error on your side |
 
-لأي 429 / 5xx / timeout بنعيد الطلب. المطابقة مفيهاش أي حالة بتتخزن عندكم، فإعادة نفس الطلب بترجع نفس الرد.
+On 429 / 5xx / timeout we retry the request. Matching stores nothing on your side, so sending the same request again returns the same response.
 
 ---
 
-## اختياري: دفعة واحدة
+## Optional: batch
 
-`POST /v1/papers/match:batch` بـ `{ "papers": [ <نفس جسم الطلب>, ... ] }` (لحد 100) والرد `{ "results": [ <نفس جسم الرد>, ... ] }` بنفس الترتيب. مش لازم للبداية.
+`POST /v1/papers/match:batch` with `{ "papers": [ <same request body>, ... ] }` (up to 100), responding `{ "results": [ <same response body>, ... ] }` in the same order. Not needed to start, and not implemented in the reference server.

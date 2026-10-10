@@ -1,66 +1,68 @@
-# مطابقة الطالب من ورقة الامتحان
+# Student matching for photographed exam papers
 
-خوارزم بيحدد ورقة امتحان متصوّرة بتاعة أنهي طالب، من البيانات اللي اتقرت من الورقة: **الاسم + الكود (ID) + التليفون (لو مكتوب)** — كود شغال + شرح + عقد API + سيرفر مرجعي جاهز.
+An algorithm that decides which student a photographed exam paper belongs to, using what was read from the paper: **name + student code (ID) + phone (if written)**. The repo contains working code, documentation, an API contract and a ready-to-run reference server.
 
-## الفكرة
+## How it works
 
-بيانات الطلاب كلها عندكم، فالمطابقة بتحصل عندكم:
+All student data lives on your side, so the matching runs on your side:
 
-1. بنبعتلكم اللي اتقرا من الورقة (اسم / كود / تليفون — أي واحد فيهم ممكن يبقى `null`).
-2. بتشغّلوا الخوارزم ده على بياناتكم وترجّعوا: **اتطابق / محتاج مراجعة / تعارض بين طالبين / مش موجود**.
-3. لو الورقة محتاجة مراجعة، بندوّر يدويًا **بالاسم أو الكود** على endpoint بحث عندكم.
-4. بعد التصحيح، الدرجات بتوصلكم بكود الطالب الأكيد.
+1. We send you what was read from the paper (name / code / phone — any of them may be `null`).
+2. You run this algorithm against your data and return: **matched / needs review / conflict between two students / not found**.
+3. If a paper needs review, we search your data manually **by name or code** through a search endpoint on your side.
+4. After grading, the marks are sent to you with the confirmed student code.
 
 ```mermaid
 sequenceDiagram
-    participant G as منصة التصحيح
-    participant A as منصتكم
-    G->>A: POST /v1/papers/match (اسم / كود / تليفون)
+    participant G as Grading platform
+    participant A as Your platform
+    G->>A: POST /v1/papers/match (name / code / phone)
     A-->>G: matched | needs_review | conflict | not_found
-    opt محتاجة مراجعة
+    opt Paper needs review
         G->>A: GET /v1/students/search?q=...
-        A-->>G: نتايج البحث
+        A-->>G: Search results
     end
-    G->>A: الدرجات (كود الطالب + الدرجة)
+    G->>A: Marks (student code + mark)
 ```
 
-## المحتوى
+## Contents
 
 | | |
 |---|---|
-| [docs/01-matching-algorithm.md](docs/01-matching-algorithm.md) | الخوارزم خطوة بخطوة مع أمثلة لكل حالة |
-| [docs/02-api-contract.md](docs/02-api-contract.md) | الـendpoints المطلوبة منكم: الطلب، الرد، الحالات، الأخطاء |
-| [docs/03-results-push.md](docs/03-results-push.md) | شكل الدرجات اللي هتوصلكم والرد المطلوب |
+| [docs/01-matching-algorithm.md](docs/01-matching-algorithm.md) | The algorithm step by step, with an example for every case |
+| [docs/02-api-contract.md](docs/02-api-contract.md) | The endpoints you need to provide: request, response, statuses, errors |
+| [docs/03-results-push.md](docs/03-results-push.md) | The marks you will receive and the response we expect |
 
-| الكود | |
+| Code | |
 |---|---|
-| [src/matching.js](src/matching.js) | الخوارزم (دالة نقية، من غير أي I/O) |
-| [src/normalize.js](src/normalize.js) | توحيد الكتابة العربي (أ/ا، ى/ي، ة/ه، أرقام عربي…) + `prepareRoster` لتجهيز بياناتكم |
-| [src/search.js](src/search.js) | البحث بالاسم أو الكود |
-| [src/api.js](src/api.js) | التحقق من الطلب + بناء الرد حسب العقد |
-| [examples/server.js](examples/server.js) | سيرفر مرجعي كامل (Node بدون framework) |
+| [src/matching.js](src/matching.js) | The algorithm (pure function, no I/O) |
+| [src/normalize.js](src/normalize.js) | Arabic text normalization (أ/ا, ى/ي, ة/ه, Arabic digits…) + `prepareRoster` to prepare your data |
+| [src/search.js](src/search.js) | Search by name or code |
+| [src/api.js](src/api.js) | Request validation + building the response defined in the contract |
+| [examples/server.js](examples/server.js) | Complete reference server (Node, no framework) |
 
-## التشغيل
+## Running it
+
+Requires Node.js 18 or later.
 
 ```bash
 npm install
-npm test                        # الاختبارات
-API_TOKEN=change-me npm start   # السيرفر المرجعي على :8080 ببيانات تجريبية
+npm test                        # run the tests
+API_TOKEN=change-me npm start   # reference server on :8080 with sample data
 ```
 
 ```bash
 curl -s localhost:8080/v1/papers/match \
   -H 'Authorization: Bearer change-me' -H 'Content-Type: application/json' \
-  -d '{"request_id":"res_1","exam":{"id":"exam_1","name":"امتحان الباب الأول","form":"A"},
+  -d '{"request_id":"res_1","exam":{"id":"exam_1","name":"Chapter 1 exam","form":"A"},
        "extracted":{"student_code":"1001","student_name":"احمد محمد","student_phone":null}}'
 
 curl -s 'localhost:8080/v1/students/search?q=%D9%85%D9%89' -H 'Authorization: Bearer change-me'
 ```
 
-السيرفر المرجعي بيقرا الطلاب من `examples/roster.sample.json` (بيانات وهمية). عندكم: بدّلوا `loadRoster()` بجدول الطلاب الحقيقي **ومرّروه على `prepareRoster()`** (توحيد الأكواد والتليفونات — [ليه](docs/01-matching-algorithm.md#البيانات-اللي-بتدخل-الخوارزم))، والباقي يفضل زي ما هو.
+The reference server reads students from `examples/roster.sample.json` (fake data). On your side: replace `loadRoster()` with your real students table **and pass it through `prepareRoster()`** (it normalizes codes and phone numbers — [why](docs/01-matching-algorithm.md#input-data)). Everything else can stay as is.
 
-`src/matching.js` هو نفس الخوارزم المستخدم فعليًا في التصحيح (اتقارن على 20,000 حالة عشوائية — صفر اختلاف).
+`src/matching.js` is the same algorithm used in grading today (compared on 20,000 random cases — zero differences).
 
-## الترخيص
+## License
 
-مسموح تشوفوا الكود وتنسخوه وتعدّلوه وتشغّلوه جوه أنظمتكم للربط مع منصة التصحيح. مش مسموح تنشروه أو توزّعوه أو تدّوه لطرف تالت — [LICENSE](LICENSE).
+You may view, copy, modify and run this code inside your own systems to integrate with the grading platform. You may not publish it, redistribute it or give it to a third party — see [LICENSE](LICENSE).

@@ -1,22 +1,22 @@
-# 03 — الدرجات اللي هتوصلكم
+# 03 — The marks you will receive
 
-بعد التصحيح، الدرجات بتتبعتلكم أوتوماتيك على رابط إنتو بتحددوه. محتاجين منكم **الرابط + التوكن**.
+After grading, marks are sent to you automatically at a URL you choose. We need from you: **the URL + a token**.
 
-## إمتى الورقة بتتبعت
+## When a paper is sent
 
-بس لما الطالب يكون **متأكد** (`matched`، أو اتأكد في المراجعة) والورقة اتقرت كاملة. ورقة لسه محتاجة مراجعة عندنا **مش بتتبعت**.
+Only when the student is **confirmed** (`matched`, or confirmed during review) and the whole paper was read. A paper that still needs review on our side is **not sent**.
 
-## الطلب
+## Request
 
 ```
-POST <الرابط بتاعكم>
-Authorization: Bearer <التوكن بتاعكم>
+POST <your URL>
+Authorization: Bearer <your token>
 Content-Type: application/json
 ```
 
 ```json
 {
-  "exam_name": "امتحان الباب الأول",
+  "exam_name": "Chapter 1 exam",
   "exam_id": "exam_51b0e7aa",
   "batch_id": "b-exam_51b0e7aa-1791234567890-0",
   "source": "scanner",
@@ -27,22 +27,22 @@ Content-Type: application/json
 }
 ```
 
-| الحقل | |
+| Field | |
 |---|---|
-| `exam_name`, `exam_id` | الامتحان (نفس `exam.id` اللي في طلب المطابقة) |
-| `batch_id` | معرّف فريد للدفعة (نص — متعتمدوش على شكله) |
-| `source` | دايمًا `"scanner"` (ورق متصوّر) |
-| `results[].student_id` | **كود الطالب** (`student_code`) — اللي رجّعتوه في المطابقة أو اتختار من بحثكم |
-| `results[].student_name` | اسم الطالب |
-| `results[].mark` / `full_mark` | الدرجة والدرجة النهائية (ممكن تبقى كسر، زي 15.5) |
+| `exam_name`, `exam_id` | The exam (the same `exam.id` as in the match request) |
+| `batch_id` | Unique ID of this batch (a string — don't rely on its format) |
+| `source` | Always `"scanner"` (photographed paper) |
+| `results[].student_id` | **The student code** (`student_code`) — the one you returned in the match response, or the one picked from your search |
+| `results[].student_name` | Student name |
+| `results[].mark` / `full_mark` | Mark and maximum mark (can be fractional, e.g. 15.5) |
 
-- طلب واحد لكل امتحان، و**حد أقصى 500 طالب** في الطلب — لو أكتر بيتقسم، كل جزء بـ`batch_id` مختلف.
+- One request per exam, with **at most 500 students** per request — larger sets are split, each part with its own `batch_id`.
 
-## الرد المطلوب
+## Expected response
 
-- أي **`2xx`** = اتستلم (الجسم مش مهم).
-- أي حاجة تانية، أو مفيش رد خلال **45 ثانية** = فشل ← بنعيد الإرسال تلقائي لحد ما يوصل.
+- Any **`2xx`** = received (the body is ignored).
+- Anything else, or no response within **45 seconds** = failure → we retry automatically until it succeeds.
 
-## مهم عندكم
+## Important on your side
 
-**اعتبروا (`exam_id` + `student_id`) مفتاح**: لو نفس الطالب في نفس الامتحان وصل تاني (إعادة إرسال، أو الورقة اتصححت تاني)، **حدّثوا** الدرجة بدل ما تضيفوا صف جديد.
+**Treat (`exam_id` + `student_id`) as a unique key**: if the same student in the same exam arrives again (a retry, or the paper was re-graded), **update** the mark instead of adding a new row.
