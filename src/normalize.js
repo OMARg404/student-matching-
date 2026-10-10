@@ -70,10 +70,39 @@ function normalizeNameWords(s) {
         .filter((w) => w.length >= 2);
 }
 
+/**
+ * Egyptian mobile -> one local format "01XXXXXXXXX".
+ * "+201000000001", "00201000000001", "201000000001", "1000000001", "010 0000 0001", "٠١٠٠٠٠٠٠٠٠١" -> "01000000001".
+ * Anything that doesn't look like an Egyptian mobile is returned as cleaned digits, unchanged otherwise.
+ */
+function normalizePhone(s) {
+    const d = normalizeDigits(s).replace(/\D/g, '');
+    if (!d) return '';
+    if (d.startsWith('0020') && d.length === 14) return '0' + d.slice(4);
+    if (d.startsWith('20') && d.length === 12) return '0' + d.slice(2);
+    if (d.startsWith('1') && d.length === 10) return '0' + d;
+    return d;
+}
+
+/**
+ * Run your students through this ONCE (when loading / when the table changes), not per request.
+ * The algorithm compares codes and phones with ===, so both sides must be in the same form:
+ *   - student_code -> string, Arabic digits -> Latin, no spaces/dashes   (1001 and "١٠٠١" -> "1001")
+ *   - phone        -> normalizePhone (+20 / 0020 / 20 / missing 0 -> "01...")
+ * Every other field is kept as is.
+ */
+function prepareRoster(students) {
+    return students.map((s) => ({
+        ...s,
+        student_code: normalizeIdentifier(s.student_code),
+        phone: s.phone === null || s.phone === undefined || s.phone === '' ? '' : normalizePhone(s.phone)
+    }));
+}
+
 /** Code / phone cleanup: Arabic digits -> Latin, trim, and drop spaces/dashes inside. */
 function normalizeIdentifier(s) {
     if (s === null || s === undefined) return '';
     return normalizeDigits(s).trim().replace(/[\s\-]/g, '');
 }
 
-module.exports = { normalizeAr, shortQueryMatches, normalizeNameWords, normalizeDigits, normalizeIdentifier };
+module.exports = { normalizeAr, shortQueryMatches, normalizeNameWords, normalizeDigits, normalizeIdentifier, normalizePhone, prepareRoster };

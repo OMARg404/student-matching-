@@ -13,6 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { validateMatchRequest, buildMatchResponse, buildSearchResponse } = require('../src/api');
+const { prepareRoster } = require('../src/normalize');
 
 const PORT = Number(process.env.PORT) || 8080;
 const API_TOKEN = process.env.API_TOKEN || '';
@@ -25,8 +26,9 @@ if (!API_TOKEN) {
 }
 
 function loadRoster() {
-    // Each student needs at least: id (internal), student_code, name. phone/group/year are optional.
-    return JSON.parse(fs.readFileSync(ROSTER_FILE, 'utf8'));
+    // Each student needs at least: student_code, name. phone/group/year are optional.
+    // prepareRoster runs once here (not per request): string codes + one phone format.
+    return prepareRoster(JSON.parse(fs.readFileSync(ROSTER_FILE, 'utf8')));
 }
 let students = loadRoster();
 

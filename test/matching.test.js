@@ -168,3 +168,31 @@ describe('suggestPossibleMatches', () => {
         assert.deepEqual(suggestPossibleMatches({ extractedCode: '6' }, ar).map((s) => s.id), ['x2']);
     });
 });
+
+describe('real-world roster shapes', () => {
+    const { prepareRoster, normalizePhone } = require('../src/normalize');
+
+    it('detects a conflict even when students have no `id` field', () => {
+        const noId = [{ student_code: '1001', name: 'أحمد محمد علي' }, { student_code: '1002', name: 'سارة علي حسن' }];
+        assert.equal(matchStudent(noId, '1001', 'سارة علي حسن').method, 'code_name_conflict');
+        assert.equal(suggestPossibleMatches({ extractedName: 'علي' }, noId).length, 2);
+    });
+
+    it('prepareRoster: numeric / Arabic-digit codes become comparable strings', () => {
+        const r = prepareRoster([{ student_code: 1001, name: 'أحمد' }, { student_code: '٢٠٠٢', name: 'سارة' }]);
+        assert.equal(matchStudent(r, '1001', 'أحمد').method, 'code_exact');
+        assert.equal(matchStudent(r, '2002', 'سارة').method, 'code_exact');
+    });
+
+    it('prepareRoster + normalizePhone: +20 / 0020 / 20 / missing-0 formats all match 010...', () => {
+        for (const stored of ['+201000000001', '00201000000001', '201000000001', '1000000001', '010-0000-0001']) {
+            const r = prepareRoster([{ student_code: '1', name: 'أحمد', phone: stored }, { student_code: '2', name: 'سارة', phone: '01111111111' }]);
+            assert.equal(matchStudent(r, '9999', '', normalizePhone('٠١٠٠٠٠٠٠٠٠١')).method, 'phone_unique', stored);
+        }
+    });
+
+    it('normalizePhone leaves non-Egyptian-mobile numbers as plain digits', () => {
+        assert.equal(normalizePhone('0225551234'), '0225551234');
+        assert.equal(normalizePhone(''), '');
+    });
+});

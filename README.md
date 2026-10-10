@@ -35,7 +35,7 @@ sequenceDiagram
 | الكود | |
 |---|---|
 | [src/matching.js](src/matching.js) | الخوارزم (دالة نقية، من غير أي I/O) |
-| [src/normalize.js](src/normalize.js) | توحيد الكتابة العربي (أ/ا، ى/ي، ة/ه، أرقام عربي…) |
+| [src/normalize.js](src/normalize.js) | توحيد الكتابة العربي (أ/ا، ى/ي، ة/ه، أرقام عربي…) + `prepareRoster` لتجهيز بياناتكم |
 | [src/search.js](src/search.js) | البحث بالاسم أو الكود |
 | [src/api.js](src/api.js) | التحقق من الطلب + بناء الرد حسب العقد |
 | [examples/server.js](examples/server.js) | سيرفر مرجعي كامل (Node بدون framework) |
@@ -57,6 +57,6 @@ curl -s localhost:8080/v1/papers/match \
 curl -s 'localhost:8080/v1/students/search?q=%D9%85%D9%89' -H 'Authorization: Bearer change-me'
 ```
 
-السيرفر المرجعي بيقرا الطلاب من `examples/roster.sample.json` (بيانات وهمية). عندكم: بدّلوا `loadRoster()` بجدول الطلاب الحقيقي، والباقي يفضل زي ما هو.
+السيرفر المرجعي بيقرا الطلاب من `examples/roster.sample.json` (بيانات وهمية). عندكم: بدّلوا `loadRoster()` بجدول الطلاب الحقيقي **ومرّروه على `prepareRoster()`** (توحيد الأكواد والتليفونات — [ليه](docs/01-matching-algorithm.md#البيانات-اللي-بتدخل-الخوارزم))، والباقي يفضل زي ما هو.
 
 `src/matching.js` هو نفس الخوارزم المستخدم فعليًا في التصحيح (اتقارن على 20,000 حالة عشوائية — صفر اختلاف).

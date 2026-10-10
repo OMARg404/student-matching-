@@ -1,11 +1,11 @@
 'use strict';
 /**
- * Turns the algorithm's internal result into the API response defined in docs/04-api-contract.md.
+ * Turns the algorithm's internal result into the API response defined in docs/02-api-contract.md.
  * Framework-free: validate + build the response body. Any HTTP server can call these.
  */
 const { matchStudent, suggestPossibleMatches } = require('./matching');
 const { searchStudents } = require('./search');
-const { normalizeIdentifier } = require('./normalize');
+const { normalizeIdentifier, normalizePhone } = require('./normalize');
 
 /** Which algorithm method maps to which public status. */
 const STATUS_BY_METHOD = {
@@ -55,7 +55,7 @@ function validateMatchRequest(body) {
     const extracted = {
         student_code: cleanText(ex.student_code) ? normalizeIdentifier(ex.student_code) : null,
         student_name: cleanText(ex.student_name),
-        student_phone: cleanText(ex.student_phone) ? normalizeIdentifier(ex.student_phone) : null
+        student_phone: cleanText(ex.student_phone) ? normalizePhone(ex.student_phone) : null
     };
     if (!extracted.student_code && !extracted.student_name && !extracted.student_phone) {
         return { ok: false, error: { code: 'NOTHING_EXTRACTED', message: 'At least one of extracted.student_code / student_name / student_phone is required' } };
@@ -72,7 +72,7 @@ function validateMatchRequest(body) {
 
 /**
  * Run the full match for one paper and build the response body.
- * @param {Array} students - the roster
+ * @param {Array} students - the roster, already passed through prepareRoster()
  * @param {object} req - a validated request (validateMatchRequest(...).value)
  */
 function buildMatchResponse(students, req) {

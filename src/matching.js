@@ -57,7 +57,8 @@ function isOneDigitOff(a, b) {
 }
 
 /**
- * @param {Array<{id: string, name: string, student_code: string, phone?: string}>} students
+ * @param {Array<{name: string, student_code: string, phone?: string}>} students - pass them through
+ *        prepareRoster() first (src/normalize.js): codes must be strings, phones in one format
  * @param {string|null} extractedCode
  * @param {string|null} extractedName
  * @param {string|null} [extractedPhone]
@@ -111,7 +112,7 @@ function matchStudent(students, extractedCode, extractedName, extractedPhone) {
 
         const codeOwnerScore = nameMatchScore(extractedNameTrimmed, studentByCode.name);
         const bestConflict = students
-            .filter((s) => s.id !== studentByCode.id)
+            .filter((s) => s !== studentByCode) // by object, so it works whatever your id field is called
             .map((s) => ({ student: s, score: nameMatchScore(extractedNameTrimmed, s.name) }))
             .filter((c) => c.score >= STRONG_NAME_MATCH_THRESHOLD && c.score > codeOwnerScore)
             .sort((a, b) => b.score - a.score)[0];
@@ -177,13 +178,13 @@ function suggestPossibleMatches({ extractedCode, extractedName, candidates }, st
     }
     const suggestions = new Map();
     if (extractedCode) {
-        students.filter((s) => s.student_code === extractedCode).forEach((s) => suggestions.set(s.id, s));
+        students.filter((s) => s.student_code === extractedCode).forEach((s) => suggestions.set(s, s));
     }
     if (extractedName) {
         const needle = normalizeAr(extractedName);
         if (needle) {
             students.filter((s) => { const n = normalizeAr(s.name); return n && (n.includes(needle) || needle.includes(n)); })
-                .forEach((s) => suggestions.set(s.id, s));
+                .forEach((s) => suggestions.set(s, s));
         }
     }
     return Array.from(suggestions.values()).slice(0, limit);
